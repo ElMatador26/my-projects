@@ -26,6 +26,7 @@ queue delete(queue q)
         return q;
     }
     q.n=q.n-1;
+    printf("The deleted element is %d\n", q.arr[q.rear]);
     q.rear=(q.rear+1)%MAX;
     return q;
 }
