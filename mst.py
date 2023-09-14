@@ -94,7 +94,14 @@ class data_processing:
             i=(i+1)%l
         return dict1
 
-
+    def create_empty_graph(self):
+        # creates the empty graph
+        
+        fig =px.scatter()
+        fig.update_yaxes(tickmode = 'linear', tick0 = 0, dtick = 1)
+        fig.update_xaxes(tickmode = 'linear', tick0 = 0, dtick = 1)
+        fig.update_layout(title_text = 'Sample Dataset')
+        return fig
 
     def create_mst_graph(self):
         # creates the mst graph in plotly
@@ -174,16 +181,18 @@ class data_processing:
 
 data = data_processing()
 
-fig = data.create_mst_graph()
+fig = data.create_empty_graph()
 graph = dcc.Graph(figure= fig, id='graph')
 input_min = dcc.Input(id='min', type='number', min=2000, max=2030, value=2018)
 input_max = dcc.Input(id='max', type='number', min=2000, max=2030, value=2030)
 side_bar = [html.H1('Input min year'), input_min, html.H1('Input max year'), input_max]
 upload_button = html.Button(id = 'upload', children = 'Upload', n_clicks = 0)
-filter_div = html.Div(side_bar, style = {'visibility': 'hidden'})
+filter_div = html.Div(side_bar, id = 'sidebar', style = {'visibility': 'hidden'})
 
-td1 = html.Td([upload_button, side_bar])
+td1 = html.Td([upload_button, filter_div])
 td2_style = {
+    'height': '70%',
+    'width': '100%',
     'padding-right': '1em',
     'border-left': '0.4em solid',
     'border-color': 'deepskyblue',
@@ -191,7 +200,13 @@ td2_style = {
     'padding-top' : '2em',
     'padding-right': '1em'
 }
-td2 = html.Td(children = graph, style=td2_style)
+
+tab1 = dcc.Tab(label = 'Graph View', value = 'gv')
+tab2 = dcc.Tab(label = 'Dataframe View', value = 'dv')
+tab = dcc.Tabs(id = 'tab',children = [tab1, tab2], value = 'gv')
+div1 = html.Div(id = 'tab_gv_output', children = graph)
+div2 = html.Div(id = 'tab_dv_output', style = {'display':'none'}, children = 'Hello')
+td2 = html.Td(children = [tab, div1, div2], style=td2_style)
 tr = html.Tr([td1, td2])
 
 table_style = {
@@ -211,9 +226,20 @@ button = html.Button(id = 'button', children = 'Submit', n_clicks=0)
 click_div = html.Div(children = [name, dept, salary, button], style ={'display':'none'}, id = 'answer') 
 main_div = [table, click_div]
 
+@callback(Output(component_id = 'tab_gv_output', component_property = 'style'),
+          Output(component_id = 'tab_dv_output', component_property = 'style'),
+          Input(component_id = 'tab', component_property = 'value'),
+          prevent_initial_call = True)
+def tab_switch(tab):
+    if tab == 'gv':
+        return [{}, {'display': 'none'}]
+    if tab == 'dv':
+        return [{'display': 'none'}, {}]
 
 @callback(Output(component_id='graph', component_property='figure'),
     Output(component_id='answer', component_property='style', allow_duplicate = True),
+    Output(component_id = 'sidebar', component_property = 'style'),
+    Input(component_id = 'upload', component_property = 'n_clicks'),
     Input(component_id='min', component_property='value'),
     Input(component_id='max', component_property='value'),
     Input('button', 'n_clicks'),
@@ -221,12 +247,15 @@ main_div = [table, click_div]
     State('salary', 'value'),
     State('name', 'value'),
     prevent_initial_call = True)
-def update(min_val, max_val, button, dept, salary, name):
+def update(upload, min_val, max_val, button, dept, salary, name):
     trig_id = ctx.triggered_id
+    if trig_id == 'upload':
+        fig = data.create_mst_graph()
+        return [fig, {'display':'none'}, {}]
     if trig_id == 'max' or trig_id == 'min':
-        return [data.update_graph([min_val, max_val]), {'display':'none'}]
+        return [data.update_graph([min_val, max_val]), {'display':'none'}, {}]
     else:
-        return [data.update_df(name, dept, salary), {'display':'none'}]
+        return [data.update_df(name, dept, salary), {'display':'none'}, {}]
 
 @callback(Output(component_id='answer', component_property='style'),
           Output('name', 'value'),
@@ -243,6 +272,8 @@ def update(clickData):
         salary = clickData['points'][0]['customdata'][3]
         
         return [{}, name, True, dept, salary]
+    else:
+        return [{'display':'none'}, '', False, '', '']
 
 
 
