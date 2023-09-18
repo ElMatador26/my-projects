@@ -4,7 +4,7 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.csgraph import minimum_spanning_tree
 import plotly.express as px
-from dash import Dash, html, dcc, Input, Output, callback, State, ctx
+from dash import Dash, html, dcc, Input, Output, callback, State, ctx, dash_table
 
 
 class data_processing:
@@ -14,9 +14,10 @@ class data_processing:
         # this method creates dummy data when there is no dataframe
 
         dict1 = {'name': ['Ayan', 'Ram', 'Shyam', 'Jodu', 'Modu'],
-                 'department': ['AIA', 'CDB', 'QEA', 'AIA', 'QEA'],
+                 'department': ['', '', '', '', ''],
                  'doj': ['10/2/2021', '4/23/2023', '8/8/2021', '2/15/2019', '2/2/2020'],
-                 'salary': [1000, 200, 300, 500, 600]}
+                 'salary': [1000, 200, 300, 500, 600],
+                 'edited': [False, False, False, False, False]}
 
         self.df = pd.DataFrame(dict1)
         self.df['doj'] = pd.to_datetime(self.df.doj, format='%m/%d/%Y')
@@ -114,7 +115,7 @@ class data_processing:
 
         hover_dict = {}
         for i in self.df.columns:
-            if i == 'x' or i == 'y':
+            if i == 'x' or i == 'y' or i == 'edited':
                 hover_dict[i] = False
             else:
                 hover_dict[i] = True
@@ -126,6 +127,7 @@ class data_processing:
         fig.update_yaxes(tickmode='linear', tick0=0, dtick=1)
         fig.update_xaxes(tickmode='linear', tick0=0, dtick=1)
         fig.update_layout(title_text='Sample Dataset')
+        fig.update_traces(marker=dict(color='green'))
         self.fig = fig
 
         return fig
@@ -140,7 +142,8 @@ class data_processing:
         fig.data[0].y = df['y']
         fig.data[0].marker.size = df['salary']
         fig.data[0].customdata = df
-
+        arr = ['blue' if i else 'green' for i in df['edited']]
+        fig.update_traces(marker=dict(color=arr))
         self.filter_df = df.reset_index(drop=True)
 
         return fig
@@ -153,6 +156,7 @@ class data_processing:
             index += 1
         self.df.loc[index, 'salary'] = salary
         self.df.loc[index, 'department'] = dept
+        self.df.loc[index, 'edited'] = True
         df = self.df
 
         if self.filter_df is not None:
@@ -164,13 +168,16 @@ class data_processing:
                 index += 1
             self.filter_df.loc[index, 'salary'] = salary
             self.filter_df.loc[index, 'department'] = dept
+            self.filter_df.loc[index, 'edited'] = True
             df = self.filter_df
         fig = self.fig
         fig.data[0].x = df['x']
         fig.data[0].y = df['y']
         fig.data[0].marker.size = df['salary']
         fig.data[0].customdata = df
-        # print(fig.to_dict())
+        arr = ['blue' if i else 'green' for i in df['edited']]
+        fig.update_traces(marker=dict(color=arr))
+        print(arr)
         return fig
 
 
@@ -184,9 +191,14 @@ side_bar = [html.H1('Input min year'), input_min,
             html.H1('Input max year'), input_max]
 upload_button = html.Button(id='upload', children='Upload', n_clicks=0)
 filter_div = html.Div(side_bar, id='sidebar', style={'visibility': 'hidden'})
-
-td1 = html.Td([upload_button, filter_div])
-td2_style = {
+name = dcc.Input(id='name')
+dept = dcc.Input(id='dept')
+salary = dcc.Input(id='salary', type='number')
+button = html.Button(id='button', children='Submit', n_clicks=0)
+click_div = html.Div(children=[name, dept, salary, button], style={
+                     'display': 'none'}, id='answer')
+col1 = html.Div(id = 'col1', children = [upload_button, filter_div, click_div])
+col2_style = {
     'height': '70%',
     'width': '100%',
     'padding-right': '1em',
@@ -202,41 +214,39 @@ tab2 = dcc.Tab(label='Dataframe View', value='dv')
 tab = dcc.Tabs(id='tab', children=[tab1, tab2], value='gv')
 div1 = html.Div(id='tab_gv_output', children=graph)
 div2 = html.Div(id='tab_dv_output', style={
-                'display': 'none'}, children='Hello')
-td2 = html.Td(children=[tab, div1, div2], style=td2_style)
-tr = html.Tr([td1, td2])
+                'display': 'none'})
+col2 = html.Div(id = 'col2', children=[tab, div1, div2], style=col2_style)
+flex_div = html.Div(children = [col1, col2], id = 'flex', style = {'display': 'flex',
+  'flex-direction': 'row'})
 
-table_style = {
-    # 'height':'70%',
-    'width': '100%',
-    # 'position': 'absolute',
-    'top': '0',
-    'bottom': '0',
-    'left': '0',
-    'right': '0',
-}
-table = html.Table(children=tr, style=table_style)
-name = dcc.Input(id='name')
-dept = dcc.Input(id='dept')
-salary = dcc.Input(id='salary', type='number')
-button = html.Button(id='button', children='Submit', n_clicks=0)
-click_div = html.Div(children=[name, dept, salary, button], style={
-                     'display': 'none'}, id='answer')
-main_div = [table, click_div]
+main_div = [flex_div]
 
 
 @callback(Output(component_id='tab_gv_output', component_property='style'),
           Output(component_id='tab_dv_output', component_property='style'),
+          Output(component_id='tab_dv_output', component_property='children', allow_duplicate=True),
           Input(component_id='tab', component_property='value'),
           prevent_initial_call=True)
 def tab_switch(tab):
     if tab == 'gv':
-        return [{}, {'display': 'none'}]
+        return [{}, {'display': 'none'},'']
     if tab == 'dv':
-        return [{'display': 'none'}, {}]
+        if data.fig is None:
+            return [{'display': 'none'}, {}, 'No data']
+        else:
+            arr = []
+            if data.filter_df is None:
+                df = data.df.drop(columns=['x', 'y'])
+            else:
+                df = data.filter_df.drop(columns=['x', 'y'])
+            for i in df.columns:
+                arr.append({"name": i, "id": i})
+            dataframe = dash_table.DataTable(df.to_dict('records'), arr)
+            return [{'display': 'none'}, {}, dataframe]
 
 
 @callback(Output(component_id='graph', component_property='figure'),
+          Output(component_id='tab_dv_output', component_property='children'),
           Output(component_id='answer',
                  component_property='style', allow_duplicate=True),
           Output(component_id='sidebar', component_property='style'),
@@ -252,12 +262,23 @@ def update(upload, min_val, max_val, button, dept, salary, name):
     trig_id = ctx.triggered_id
     if trig_id == 'upload':
         fig = data.create_mst_graph()
-        return [fig, {'display': 'none'}, {}]
+        arr = []
+        df = data.df.drop(columns=['x', 'y'])
+        for i in df.columns:
+            arr.append({"name": i, "id": i})
+            dataframe = dash_table.DataTable(df.to_dict('records'), arr)
+        return [fig, dataframe,{'display': 'none'}, {}]
 
     if trig_id == 'max' or trig_id == 'min':
-        return [data.update_graph([min_val, max_val]), {'display': 'none'}, {}]
+        graph = data.update_graph([min_val, max_val])
+        arr = []
+        df = data.filter_df.drop(columns=['x', 'y'])
+        for i in df.columns:
+            arr.append({"name": i, "id": i})
+        dataframe = dash_table.DataTable(df.to_dict('records'), arr)
+        return [graph, dataframe, {'display': 'none'}, {}]
     else:
-        return [data.update_df(name, dept, salary), {'display': 'none'}, {}]
+        return [data.update_df(name, dept, salary), 'No data', {'display': 'none'}, {}]
 
 
 @callback(Output(component_id='answer', component_property='style'),
@@ -274,7 +295,7 @@ def update(clickData):
         dept = clickData['points'][0]['customdata'][1]
         salary = clickData['points'][0]['customdata'][3]
 
-        return [{}, name, True, dept, salary]
+        return [{'padding-top': '2em'}, name, True, dept, salary]
     else:
         return [{'display': 'none'}, '', False, '', '']
 
@@ -293,4 +314,4 @@ div_style = {
 app = Dash(__name__, suppress_callback_exceptions=True)
 app.layout = html.Div(main_div, style=div_style)
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
