@@ -148,13 +148,16 @@ def update(clickData):
 @callback(Output(component_id='graph', component_property='figure'),
           Output(component_id='tab_dv_output', component_property='children'),
           Output('timestamp', 'data'),
-          Input(component_id='interval', component_property='n_interval'),
+          Input(component_id='interval', component_property='n_intervals'),
           State('min_val', component_property='data'),
           State('max_val', component_property='data'),
           State('timestamp', 'data'),
+          State(component_id='graph', component_property='figure'),
+          State(component_id='tab_dv_output', component_property='children'),
           prevent_initial_call = True)
-def interval_update(n_interval, min_val, max_val, timestamp):
+def interval_update(n_interval, min_val, max_val, timestamp, graph, dv):
     global time
+    print(time, timestamp)
     if time > timestamp:
         df, fig = data.update_graph([min_val, max_val])
         arr = []
@@ -163,6 +166,8 @@ def interval_update(n_interval, min_val, max_val, timestamp):
                 arr.append({"name": i, "id": i})
         dataframe = dash_table.DataTable(df.to_dict('records'), arr)
         return [fig, dataframe, datetime.datetime.now()]
+    else:
+        return [graph, dv, timestamp]
 
 
 
