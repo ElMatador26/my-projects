@@ -53,7 +53,7 @@ class data_processing:
             angle = np.random.uniform(0, 7)
             x = prev[0]+(d*np.sin(angle))
             y = prev[1]+(d*np.cos(angle))
-        
+
         return (x, y)
 
     def mst(self):
@@ -101,7 +101,7 @@ class data_processing:
 
     def create_graph(self, df):
         # create a graph from a dataframe
-        
+
         if self.fig is None:
             hover_dict = {}
             for i in self.df.columns:
@@ -109,15 +109,15 @@ class data_processing:
                     hover_dict[i] = False
                 else:
                     hover_dict[i] = True
-            
+
             fig = px.scatter(self.df, x='x', y='y', size='salary',
-                         hover_data=hover_dict)
+                             hover_data=hover_dict)
             fig.update_yaxes(tickmode='linear', tick0=0, dtick=1)
             fig.update_xaxes(tickmode='linear', tick0=0, dtick=1)
             fig.update_layout(title_text='Sample Dataset')
             fig.update_traces(marker=dict(color='green'))
             self.fig = fig
-        
+
         else:
             fig = self.fig
             fig.data[0].x = df['x']
@@ -126,15 +126,13 @@ class data_processing:
             fig.data[0].customdata = df
             arr = ['blue' if i else 'green' for i in df['edited']]
             fig.update_traces(marker=dict(color=arr))
-            self.fig = fig
         return fig
-
 
     def create_mst_graph(self):
         # creates the mst graph in plotly
-        
-        if self.fig is not None:
-            return self.fig
+
+        # if self.fig is not None:
+        #     return self.fig
         mat = self.mst()
         dict1 = self.__create_coord_dict(mat)
         for i in dict1:
@@ -148,9 +146,9 @@ class data_processing:
 
         df = self.df[(self.df['doj'].dt.year >= arr[0])
                      & (self.df['doj'].dt.year <= arr[1])]
-        
+
         filter_df = df.reset_index(drop=True)
-        return filter_df, self.create_graph(filter_df) 
+        return filter_df, self.create_graph(filter_df)
         # return self.create_graph(self.filter_df)
 
     def update_df(self, name, dept, salary):
@@ -163,19 +161,11 @@ class data_processing:
         self.df.loc[index, 'department'] = dept
         self.df.loc[index, 'edited'] = True
         df = self.df
-
-        # if self.filter_df is not None:
-
-        #     index = 0
-        #     for i in self.filter_df['name']:
-        #         if i == name:
-        #             break
-        #         index += 1
-        #     self.filter_df.loc[index, 'salary'] = salary
-        #     self.filter_df.loc[index, 'department'] = dept
-        #     self.filter_df.loc[index, 'edited'] = True
-        #     df = self.filter_df
-        
         return self.create_graph(df)
 
+if __name__ == '__main__':
+    data = data_processing()
+    data.create_mst_graph()
+    df, _ = data.update_graph([2018, 2022])
 
+    print(df)
