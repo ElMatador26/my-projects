@@ -1,0 +1,77 @@
+#col2 {
+        height: 70%;
+        width: 100%;
+        padding-right: 1em;
+        /* border-left: 0.4em solid; */
+        /* border-color: rgb(239, 11, 41); */
+        padding-left: 1em;
+        padding-top: 2em;
+        padding-right: 1em
+}
+
+#col1{
+        height: fit-content;
+        border: 0.4em solid;
+        border-color: chartreuse;
+        background: radial-gradient(circle, #ece8e8,#9e9a9a,#4f4d4d);
+        margin-top: 1em;
+        border-radius: 20px;
+        box-shadow: 0 0 20px rgba(19, 18, 18, 0.5);
+}
+#flex{
+      display: flex;
+      flex-direction: row;
+      height: 100%;  
+}
+
+#answer{
+        padding-top: 2em;
+        display:flex;
+        flex-direction: column;
+}
+
+#name_div, #dept_div, #salary_div{
+        padding-bottom: 1em;
+        padding-left: 1em;
+}
+
+#button_div{
+        padding-bottom: 1em;
+        text-align: center;
+}
+
+#upload{
+        margin-top: 2em;
+        margin-left: 1em;
+}
+
+#main_div{
+        opacity: 0.8;
+        background-color: #c0e7f5;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0px;
+        left: 0px;
+        z-index: 1000
+}
+
+#min_div, #max_div{
+        padding-bottom: 1em;
+        padding-top: 2em;
+        font-size: 1em;
+}
+
+#sidebar{
+        margin-left: 1em;
+        margin-right: 1em;
+}
+
+#submit{
+        margin-top: 1em;
+        text-align: center;
+}
+
+#submit_div{
+        text-align: center;
+}
