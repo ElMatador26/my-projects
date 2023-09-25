@@ -1,4 +1,12 @@
-from mst import data_processing
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Sep  8 15:54:03 2023
+
+@author: 2130006
+"""
+
+
+from data import data_processing
 
 from dash import Dash, html, dcc, Input, Output, callback, State, ctx, dash_table  # type: ignore
 # import pandas as pd
@@ -38,7 +46,7 @@ flex_div = html.Div(children=[col1, col2], id='flex', style={'display': 'flex',
                                                              'flex-direction': 'row'})
 
 main_div = [flex_div, dcc.Store(id = 'max_val'), dcc.Store(id = 'min_val'), dcc.Store(id = 'timestamp')] 
-main_div.append(dcc.Interval(id = 'interval', interval=5*1000, n_intervals=0))
+main_div.append(dcc.Interval(id = 'interval', interval=7*1000, n_intervals=0))
 # tabs callback
 @callback(Output(component_id='tab_gv_output', component_property='style'),
           Output(component_id='tab_dv_output', component_property='style'),
@@ -168,7 +176,11 @@ def interval_update(n_interval, min_val, max_val, timestamp, graph, dv):
          timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
     
     if time is not None and timestamp is not None and time > timestamp:
-        df, fig = data.update_graph([min_val, max_val])
+        if max_val is not None and min_val is not None:
+            df, fig = data.update_graph([min_val, max_val])
+        else:
+            df = data.df
+            fig = data.create_graph(df)
         arr = []
         df = df.drop(columns=['x', 'y'])
         # print(min_val, max_val)
@@ -182,16 +194,6 @@ def interval_update(n_interval, min_val, max_val, timestamp, graph, dv):
 
 
 
-div_style = {
-    'opacity': '0.8',
-    'background-color': '#ccc',
-    'position': 'fixed',
-    'width': '100%',
-    'height': '100%',
-    'top': '0px',
-    'left': '0px',
-    'z-index': '1000'
-}
 
 
 app = Dash(__name__, suppress_callback_exceptions=True)
