@@ -15,7 +15,14 @@ data = data_processing()
 time = None
 fig = data.create_empty_graph()
 graph = dcc.Graph(figure=fig, id='graph')
-input_min = dcc.Input(id='min', type='number', min=2000, max=2030, value=2018)
+# input_min = dcc.DatePickerRange(
+#         id='max',
+#         # min_date_allowed=datetime.date(1995, 8, 5),
+#         # max_date_allowed=datetime.date(2017, 9, 19),
+#         # initial_visible_month=datetime.date(2017, 8, 5),
+#         # end_date=datetime.date(2017, 8, 25)
+#     )
+input_min = dcc.Input(id='min', type='number', min=2000, max=2030, value=2030) 
 input_max = dcc.Input(id='max', type='number', min=2000, max=2030, value=2030)
 submit = html.Button(id='submit', children='Submit', n_clicks=0)
 side_bar = [html.Div('Input min year', id = 'min_div'), input_min,
