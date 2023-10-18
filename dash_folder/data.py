@@ -167,8 +167,7 @@ class data_processing:
         self.df.loc[index, 'salary'] = salary
         self.df.loc[index, 'department'] = dept
         self.df.loc[index, 'edited'] = True
-        df = self.df
-        return self.create_graph(df)
+        return
 
 if __name__ == '__main__':
     data = data_processing()

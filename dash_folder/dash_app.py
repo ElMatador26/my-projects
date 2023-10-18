@@ -11,6 +11,8 @@ from data import data_processing
 from dash import Dash, html, dcc, Input, Output, callback, State, ctx, dash_table  # type: ignore
 # import pandas as pd
 import datetime
+from dash_extensions import WebSocket
+
 data = data_processing()
 time = None
 fig = data.create_empty_graph()
@@ -22,7 +24,7 @@ graph = dcc.Graph(figure=fig, id='graph')
 #         # initial_visible_month=datetime.date(2017, 8, 5),
 #         # end_date=datetime.date(2017, 8, 25)
 #     )
-input_min = dcc.Input(id='min', type='number', min=2000, max=2030, value=2030) 
+input_min = dcc.Input(id='min', type='number', min=2000, max=2030, value=2018) 
 input_max = dcc.Input(id='max', type='number', min=2000, max=2030, value=2030)
 submit = html.Button(id='submit', children='Submit', n_clicks=0)
 side_bar = [html.Div('Input min year', id = 'min_div'), input_min,
@@ -38,7 +40,7 @@ dept_div = html.Div([html.Div('Dept:'), dept], id = 'dept_div')
 salary_div = html.Div([html.Div('Salary:'), salary], id = 'salary_div')
 button_div = html.Div(children = button, id = 'button_div')
 click_div = html.Div(children=[name_div, dept_div, salary_div, button_div], style={
-                     'visibility': 'hidden'}, id='answer')
+                      'visibility': 'hidden'}, id='answer')
 col1 = html.Div(id='col1', children=[upload_button, filter_div, click_div])
 
 
@@ -50,10 +52,10 @@ div2 = html.Div(id='tab_dv_output', style={
                 'display': 'none'}, children = 'No data')
 col2 = html.Div(id='col2', children=[tab, div1, div2])
 flex_div = html.Div(children=[col1, col2], id='flex', style={'display': 'flex',
-                                                             'flex-direction': 'row'})
+                                                              'flex-direction': 'row'})
 
 main_div = [flex_div, dcc.Store(id = 'max_val'), dcc.Store(id = 'min_val'), dcc.Store(id = 'timestamp')] 
-main_div.append(dcc.Interval(id = 'interval', interval=7*1000, n_intervals=0))
+main_div.append(WebSocket(url="ws://127.0.0.1:5000/ws", id="ws"))
 # tabs callback
 @callback(Output(component_id='tab_gv_output', component_property='style'),
           Output(component_id='tab_dv_output', component_property='style'),
@@ -73,7 +75,7 @@ def tab_switch(tab):
 @callback(Output(component_id='graph', component_property='figure', allow_duplicate=True),
           Output(component_id='sidebar', component_property='style'),
           Output(component_id='tab_dv_output',
-                 component_property='children', allow_duplicate=True),
+                  component_property='children', allow_duplicate=True),
           Input(component_id='upload', component_property='n_clicks'),
           State('graph', 'figure'),
           State('tab_dv_output', 'children'),
@@ -93,30 +95,19 @@ def update(upload, fig, dataframe, min_val, max_val):
         return [fig, {}, dataframe]
     
 # edit df callback
-@callback(Output(component_id='graph', component_property='figure', allow_duplicate=True),
-          Output(component_id='tab_dv_output', component_property='children', allow_duplicate=True),
-          Output(component_id = 'timestamp', component_property='data', allow_duplicate=True),
+@callback(Output(component_id='ws', component_property='send'),
           Input('button', 'n_clicks'),
           State('dept', 'value'),
           State('salary', 'value'),
           State('name', 'value'),
-          State('min_val', 'data'),
-          State('max_val', 'data'),
+          State('graph', 'figure'),
           prevent_initial_call=True)
-def update_data(button, dept, salary, name, min_val, max_val):
+def update_data(button, dept, salary, name, fig):
     global time
     time = datetime.datetime.now()
-    graph = data.update_df(name, dept, salary)
-    df = data.df.drop(columns=['x', 'y'])
-    if min_val is not None and max_val is not None:
-        df, graph = data.update_graph([min_val, max_val])
-        df = df.drop(columns=['x', 'y'])
-    
-    arr = []
-    for i in df.columns:
-            arr.append({"name": i, "id": i})
-    dataframe = dash_table.DataTable(df.to_dict('records'), arr)
-    return [graph, dataframe, time.isoformat(' ', 'seconds')]
+    data.update_df(name, dept, salary)
+    # print("Hello")
+    return "updated"
 
 # make edit inputs disappear
 @callback(Output(component_id='answer', component_property='style', allow_duplicate=True),
@@ -165,39 +156,26 @@ def update(clickData):
     else:
         return [{'visibility': 'hidden'}, '', False, '', '']
 
-
-# update graph and dataframe
-@callback(Output(component_id='graph', component_property='figure'),
+# Update graph and df
+@callback(Output('graph', 'figure'),
           Output(component_id='tab_dv_output', component_property='children'),
-          Output('timestamp', 'data'),
-          Input(component_id='interval', component_property='n_intervals'),
-          State('min_val', component_property='data'),
-          State('max_val', component_property='data'),
-          State('timestamp', 'data'),
-          State(component_id='graph', component_property='figure'),
-          State(component_id='tab_dv_output', component_property='children'),
+          Input('ws', 'message'),
+          State(component_id='min_val', component_property='data'),
+          State(component_id='max_val', component_property='data'),
           prevent_initial_call = True)
-def interval_update(n_interval, min_val, max_val, timestamp, graph, dv):
-    global time
-    if timestamp is not None:
-         timestamp = datetime.datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-    
-    if time is not None and timestamp is not None and time > timestamp:
-        if max_val is not None and min_val is not None:
-            df, fig = data.update_graph([min_val, max_val])
-        else:
-            df = data.df
-            fig = data.create_graph(df)
-        arr = []
-        df = df.drop(columns=['x', 'y'])
-        # print(min_val, max_val)
-        for i in df.columns:
-                arr.append({"name": i, "id": i})
-        dataframe = dash_table.DataTable(df.to_dict('records'), arr)
-        return [fig, dataframe, time.strftime('%Y-%m-%d %H:%M:%S')]
+def update_all(msg, min_val, max_val):
+    if max_val is not None and min_val is not None:
+        df, fig = data.update_graph([min_val, max_val])
+        
     else:
-        return [graph, dv, timestamp]
-
+        df = data.df
+        fig = data.create_graph(df)
+    df = df.drop(columns = ['x', 'y'])
+    arr = []
+    for i in df.columns:
+        arr.append({"name": i, "id": i})
+    dataframe = dash_table.DataTable(df.to_dict('records'), arr)
+    return [fig, dataframe]
 
 
 
@@ -207,4 +185,5 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 app.layout = html.Div(main_div, id = 'main_div')
 if __name__ == '__main__':
     app.run(debug=True)
+
  
